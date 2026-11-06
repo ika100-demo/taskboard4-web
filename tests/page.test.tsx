@@ -1,38 +1,22 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-import HomePage from "@/app/page";
+import HomePage, { dynamic } from "@/app/page";
+
+vi.mock("@/app/actions", () => ({ createTaskAction: vi.fn() }));
+vi.mock("@/app/_lib/tasks-api", () => ({
+  listTasks: vi.fn(async () => ({ ok: true, tasks: [{ id: "1", title: "Buy milk", due_date: null }] })),
+}));
 
 describe("HomePage", () => {
-  it("renders the project heading", () => {
-    render(<HomePage />);
-    expect(screen.getByRole("heading", { level: 1, name: "taskboard4-web" })).toBeInTheDocument();
+  it("is rendered per request", () => {
+    expect(dynamic).toBe("force-dynamic");
   });
 
-  it("offers the two primary actions", () => {
-    render(<HomePage />);
-    expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute("href", "#get-started");
-    expect(screen.getByRole("link", { name: "Check health" })).toHaveAttribute("href", "/api/health");
-  });
-
-  it("lists what is included as accessible cards", () => {
-    render(<HomePage />);
-    const features = screen.getByRole("region", { name: "What's included" });
-    const items = within(features).getAllByRole("listitem");
-    expect(items.length).toBeGreaterThanOrEqual(5);
-    expect(within(features).getByRole("heading", { level: 3, name: "Health and readiness" })).toBeInTheDocument();
-    expect(within(features).getByRole("heading", { level: 3, name: "Metrics and tracing" })).toBeInTheDocument();
-  });
-
-  it("explains how to get started in order", () => {
-    render(<HomePage />);
-    const steps = within(screen.getByRole("region", { name: "Get started" })).getAllByRole("listitem");
-    expect(steps).toHaveLength(3);
-  });
-
-  it("keeps a single level-1 heading and ordered sections", () => {
-    render(<HomePage />);
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["What's included", "Get started"]);
+  it("renders the task board with the loaded tasks", async () => {
+    render(await HomePage());
+    expect(screen.getByRole("heading", { level: 1, name: "Tasks" })).toBeInTheDocument();
+    expect(screen.getByText("Buy milk")).toBeInTheDocument();
+    expect(screen.getByRole("form", { name: "Create task" })).toBeInTheDocument();
   });
 });
