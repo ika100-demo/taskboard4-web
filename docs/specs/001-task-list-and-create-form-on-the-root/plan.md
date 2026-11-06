@@ -10,6 +10,7 @@ tasks:
     covers: [AC-001.1, AC-001.4, AC-001.6, AC-001.7, AC-001.9, AC-001.10, AC-001.11, AC-001.12, AC-001.14, AC-001.15]
     parallel_safe: true
     depends_on: []
+    done: true
   - id: t2
     title: Replace the starter page with the task board (list, states, create form)
     files: [app/page.tsx, app/_components/task-board.tsx, app/_components/feature-card.tsx, app/_components/icons.tsx, app/globals.css, tests/page.test.tsx, e2e/home.spec.ts]
