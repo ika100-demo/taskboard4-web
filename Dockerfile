@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1.7
+
+FROM node:24-slim AS deps
+WORKDIR /app
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile
+
+
+FROM node:24-slim AS builder
+WORKDIR /app
+RUN corepack enable
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm build
+
+
+FROM node:24-slim AS runtime
+# Links the GHCR package to this repository, so CI's GITHUB_TOKEN can push to it (no manual "Manage Actions access" step).
+LABEL org.opencontainers.image.source="https://github.com/ika100-demo/taskboard4-web" \
+      org.opencontainers.image.description="Web UI for taskboard4"
+WORKDIR /app
+
+# Debian security updates published after the base image was built (e.g. apt 2.6.1 → 2.6.2, CVE-2026-109518): the release
+# image scan blocks fixable HIGH/CRITICAL findings, and a rebuild of the same base tag would not pick them up.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+# The server runs with plain `node`; npm, npx and corepack are not needed at runtime. Removing them drops npm's bundled
+# undici (6.28.0 in node:24-slim, fixable HIGH/CRITICAL CVEs that block the release image scan, #421).
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+
+# Standalone output: server.js + the minimal node_modules it needs.
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
+
+# Numeric UID: Kubernetes cannot verify runAsNonRoot for a named user (1000 = the image's "node" user).
+USER 1000:1000
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+
+CMD ["node", "server.js"]
