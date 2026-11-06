@@ -1,7 +1,7 @@
 ---
 spec_id: 001-task-list-and-create-form-on-the-root
 title: Task list and create form on the root page, talking to the Task API
-status: building
+status: done
 priority: P1
 shape: web-nextjs
 parent: ika100-demo/taskboard4-gitops:001-persistent-tasks-in-postgres-with-a-web
@@ -165,3 +165,4 @@ As a person using taskboard4, I want a clear message when tasks cannot be loaded
 - 2026-11-06 amended: answered all open questions with the suggested answers; added AC-001.16 (a task created after a failed load is shown below the load message); added "Decisions taken during the ship".
 - 2026-11-06 approved
 - 2026-11-06 building
+- 2026-11-06 done
